@@ -22,18 +22,18 @@ alerts_data = pd.read_json(full_path)
 
 base_date = dt.datetime(2023,10,7,6,30)
 
-alertsByRegion = alerts_data[alerts_data['data'].str.contains('ראשון')]
+alerts_data = alerts_data[alerts_data['category'] == 1]
+alertsByRegion = alerts_data[alerts_data['data'].str.contains('אזור תעשייה הדרומי אשקלון')]
 #alertsByRegion = alerts_data # no filteing 
 
 alertsByRegion = alertsByRegion.iloc[::-1] #revere the data
-previous = alertsByRegion.iloc[1].alertDate
-for index, row in alertsByRegion.iterrows():
-    minutes = ((dt.datetime.strptime(row['alertDate'], '%Y-%m-%dT%H:%M:%S') 
-                - dt.datetime.strptime(previous, '%Y-%m-%dT%H:%M:%S')).total_seconds())/60
-    alertsByRegion.loc[index, 'X'] = minutes
-    previous = row['alertDate']
 
+alertsByRegion['alertDate'] = pd.to_datetime(alertsByRegion['alertDate'])
+alertsByRegion['timeDifference'] = alertsByRegion['alertDate'].diff().apply(lambda x: x/np.timedelta64(1, 'm')).fillna(0).astype('int64')
+#print(alertsByRegion['timeDifference'])
 window_size = 3
-alertsByRegion['MovingAverage'] = alertsByRegion['X'].rolling(window=window_size).mean()
+alertsByRegion['MovingAverage'] = alertsByRegion['timeDifference'].rolling(window=window_size).mean()
 alertsByRegion.dropna(inplace=True)
 print(alertsByRegion['MovingAverage'] )
+y_next = alertsByRegion.iloc[-1]['alertDate'] + timedelta(minutes=alertsByRegion.iloc[-1]['MovingAverage'])
+print("next alert by moving avarage :", y_next)
